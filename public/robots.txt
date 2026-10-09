@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /search
+Disallow: /api/
+Disallow: /settings
+
+Sitemap: https://axion-search.axn.cc.cd/sitemap.xml

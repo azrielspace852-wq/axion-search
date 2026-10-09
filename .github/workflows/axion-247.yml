@@ -1,0 +1,129 @@
+name: axion-247
+
+# ─────────────────────────────────────────────────────────────
+#  AXION Search — 24/7 via GitHub Actions + Cloudflare Tunnel
+#
+#  Strategi 24/7 (maks 6 jam/job):
+#   1. SELF-CHAIN (utama): setiap job, pada menit ke-290,
+#      memicu job berikutnya via workflow_dispatch (PAT).
+#      Job baru menunggu sampai job lama mati (health check),
+#      lalu mengambil alih — jeda hanya beberapa detik.
+#   2. SAFETY-NET (cadangan): cron setiap 30 menit. Jika situs
+#      down, langsung spin-up job baru. Jika sehat, skip.
+#   3. timeout-minutes: 350 (5j50m) — selalu di bawah 6 jam.
+#
+#  Semua output dibungkam (> /dev/null). Tidak ada secret yang
+#  pernah di-print.
+# ─────────────────────────────────────────────────────────────
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # safety net setiap 30 menit
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: 'internal chain marker (jangan diubah)'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: axion-serve
+  cancel-in-progress: false   # biarkan overlap (cloudflared HA)
+
+jobs:
+  serve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350      # 5j 50m — aman di bawah batas 6 jam
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Safety-net health check (skip jika situs sehat)
+        id: check
+        run: |
+          if [ "${{ github.event.inputs.chain }}" != "true" ]; then
+            if curl -sf --max-time 8 https://axion-search.axn.cc.cd/health >/dev/null 2>&1; then
+              echo "skip=true" >> $GITHUB_OUTPUT
+            else
+              echo "skip=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies (silent)
+        if: steps.check.outputs.skip != 'true'
+        run: npm ci --silent >/dev/null 2>&1 || npm install --silent >/dev/null 2>&1
+
+      - name: Install cloudflared (silent)
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
+          chmod +x /usr/local/bin/cloudflared
+
+      - name: Tulis secret ke file (silent, tanpa print)
+        if: steps.check.outputs.skip != 'true'
+        env:
+          CERT_PEM: ${{ secrets.CLOUDFLARED_CERT_PEM }}
+          TUNNEL_JSON: ${{ secrets.TUNNEL_CREDENTIALS_JSON }}
+          TUNNEL_UUID: ${{ secrets.TUNNEL_UUID }}
+        run: |
+          mkdir -p ~/.cloudflared
+          printf '%s' "$CERT_PEM" > ~/.cloudflared/cert.pem
+          printf '%s' "$TUNNEL_JSON" > ~/.cloudflared/${TUNNEL_UUID}.json
+          sed "s/__TUNNEL_UUID__/${TUNNEL_UUID}/g" cloudflared/config.yaml.template > ~/.cloudflared/config.yml
+          chmod 600 ~/.cloudflared/*
+
+      - name: Tunggu job lama melepas origin (health-wait, maks 50m)
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          # Jika situs masih dilayani job lama, tunggu sampai mati.
+          # Lewati jika ini safety-net (situs sudah down).
+          if [ "${{ github.event.inputs.chain }}" = "true" ]; then
+            for i in $(seq 1 200); do
+              if curl -sf --max-time 5 https://axion-search.axn.cc.cd/health >/dev/null 2>&1; then
+                sleep 15
+              else
+                break
+              fi
+            done
+          fi
+
+      - name: Jalankan tunnel + server (silent) + self-chain di background
+        if: steps.check.outputs.skip != 'true'
+        env:
+          AI_KEY_1: ${{ secrets.AI_KEY_1 }}
+          AI_KEY_2: ${{ secrets.AI_KEY_2 }}
+          AI_KEY_3: ${{ secrets.AI_KEY_3 }}
+          AI_MODEL_DEFAULT: ${{ secrets.AI_MODEL_DEFAULT }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          PORT: 3000
+          SILENT: 1
+        run: |
+          # Mulai cloudflared tunnel (mendukung multi-connector/HA)
+          nohup cloudflared tunnel run axion-search >/dev/null 2>&1 &
+          sleep 6
+          # Mulai server Node
+          nohup node server.js >/dev/null 2>&1 &
+          sleep 4
+          # Verifikasi origin lokal hidup
+          curl -sf --max-time 5 http://localhost:3000/health >/dev/null 2>&1 || exit 1
+          # ── SELF-CHAIN: pada menit ke-290, picu job berikutnya ──
+          (
+            sleep 17400   # 290 menit
+            curl -s -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_PAT}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/${{ github.repository }}/actions/workflows/axion-247.yml/dispatches \
+              -d '{"ref":"${{ github.ref_name }}","inputs":{"chain":"true"}}' \
+              >/dev/null 2>&1
+          ) &
+          # Keep-alive sampai mendekati batas timeout (5j45m)
+          sleep 345m
