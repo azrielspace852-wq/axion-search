@@ -19,7 +19,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const SILENT = process.env.SILENT !== '0';
-if (SILENT) { console.log = () => {}; console.info = () => {}; console.warn = () => {}; console.error = () => {}; }
+if (SILENT) { console.log = () => {}; console.info = () => {}; console.warn = () => {}; }
+// Error TETAP ditulis ke stderr meski SILENT=1 — kalau tidak, mustahil debug.
+const logErr = (...a) => process.stderr.write('[axion-err] ' + a.map(x => (x && x.stack) ? x.stack : String(x?.message || x)).join(' ') + '\n');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DOMAIN = process.env.PUBLIC_DOMAIN || 'https://axion-search.axn.cc.cd';
@@ -80,20 +82,36 @@ async function webBing(q, safeOn, lang = 'en') {
   if (blocked(data)) throw new Error('bing blocked');
   const $ = cheerio.load(data);
   const out = [];
-  $('#b_results > li.b_algo').each((_, el) => {
+  // FIX: selector lama `#b_results > li.b_algo` sudah usang. Coba beberapa
+  // varian, lalu fallback ke `h2 a` apa pun yang link-nya eksternal.
+  $('#b_results li.b_algo, #b_results .b_algo, li.b_algo').each((_, el) => {
     const $a = $(el).find('h2 a').first();
     const title = $a.text().trim();
     const link = absolute($a.attr('href'), 'https://www.bing.com');
     const snippet = $(el).find('.b_caption p').text().trim() || $(el).find('p').first().text().trim();
     if (title && link) out.push({ title, link, snippet, source: hostOf(link) });
   });
+  if (!out.length) {
+    $('h2 a, h3 a').each((_, el) => {
+      const $a = $(el);
+      const title = $a.text().trim();
+      const link = absolute($a.attr('href'), 'https://www.bing.com');
+      if (title && /^https?:\/\//.test(link) && !/bing\.com|microsoft\.com|msn\.com|live\.com/i.test(link)) {
+        const snippet = $a.closest('li, div').find('p').first().text().trim();
+        out.push({ title, link, snippet, source: hostOf(link) });
+      }
+    });
+  }
   if (!out.length) throw new Error('bing empty');
   return out;
 }
 
 async function webDuckDuckGo(q, safeOn) {
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(applySafe(q, safeOn))}&kl=wt-wt`;
-  const { data } = await axios.post(url, null, { headers: { ...HDR, Referer: 'https://duckduckgo.com/' }, timeout: 15000 });
+  // FIX: POST harus pakai form body q=... (bukan null). Endpoint html DDG
+  // membaca query dari body, bukan dari query string.
+  const url = `https://html.duckduckgo.com/html/`;
+  const body = new URLSearchParams({ q: applySafe(q, safeOn), kl: 'wt-wt' });
+  const { data } = await axios.post(url, body, { headers: { ...HDR, Referer: 'https://duckduckgo.com/', 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000 });
   const $ = cheerio.load(data);
   const out = [];
   $('.result').each((_, el) => {
@@ -122,6 +140,28 @@ async function webMojeek(q, safeOn) {
     if (title && /^https?:\/\//.test(link)) out.push({ title, link, snippet, source: hostOf(link) });
   });
   if (!out.length) throw new Error('mojeek empty');
+  return out;
+}
+async function webGoogleBasic(q, safeOn) {
+  // Google versi HTML dasar (gbv=1) — jauh lebih jarang diblok daripada
+  // google.com/search biasa. Hasil dalam <a href="/url?q=...">.
+  const url = `https://www.google.com/search?gbv=1&num=20&hl=en&q=${encodeURIComponent(applySafe(q, safeOn))}`;
+  const { data } = await axios.get(url, { headers: { ...HDR, Referer: 'https://www.google.com/' }, timeout: 12000, validateStatus: () => true, maxRedirects: 5 });
+  if (blocked(data)) throw new Error('google basic blocked');
+  const $ = cheerio.load(data);
+  const out = [];
+  $('a[href^="/url?q="]').each((_, el) => {
+    const $a = $(el);
+    const raw = $a.attr('href') || '';
+    const m = raw.match(/[?&]q=([^&]+)/);
+    const link = m ? decodeURIComponent(m[1]) : '';
+    const title = $a.text().trim();
+    if (title && /^https?:\/\//.test(link) && !/google\.com|youtube\.com/i.test(link)) {
+      const snippet = $a.parent().next('div, span, td').text().trim().slice(0, 300);
+      out.push({ title, link, snippet, source: hostOf(link) });
+    }
+  });
+  if (!out.length) throw new Error('google basic empty');
   return out;
 }
 
@@ -276,7 +316,7 @@ async function axionSearch(q) {
  *  ORKESTRATOR: rotasi provider + merge hasil (kaya, dedupe)
  * ============================================================ */
 const PROVIDER_MAP = {
-  web:    [webGoogle, webBing, webDuckDuckGo, webMojeek],
+  web:    [webDuckDuckGo, webBing, webGoogleBasic, webGoogle, webMojeek],
   images: [imgBing, imgDuckDuckGo],
   videos: [vidBing, vidYouTube],
   news:   [newsGoogle, newsBing],
@@ -298,14 +338,16 @@ async function runSearch(type, q, opts = {}) {
   const lang = opts.lang || 'en';
   let merged = [];
   let tried = 0;
-  for (let i = 0; i < fns.length && merged.length < 25 && tried < 3; i++) {
+  // FIX: dulu `tried < 3` — hanya coba 3 provider. Sekarang coba SEMUA,
+  // dan error dicatat ke stderr (tidak lagi ditelan bulat-bulat).
+  for (let i = 0; i < fns.length && merged.length < 25; i++) {
     const fn = fns[(start + i) % fns.length];
     tried++;
     try {
       const r = await fn(q, safeOn, lang);
       merged = merged.concat(r || []);
       merged = dedupe(merged);
-    } catch { /* lanjut ke provider berikutnya */ }
+    } catch (e) { logErr(`provider ${fn.name} [${type}] failed:`, e); }
   }
   merged = filterSafe(merged, safeOn);
 
@@ -327,7 +369,7 @@ const LANG_NAME = { id: 'Bahasa Indonesia', en: 'English', es: 'Español', fr: '
 async function summarizeAI(query, webResults, opts = {}) {
   if (opts.aiOn === false) return null;
   if (!AI_KEYS.length) { const e = new Error('no key'); e.code = 'NO_KEY'; throw e; }
-  if (!webResults?.length) { const e = new Error('no result'); e.code = 'NO_RESULT'; throw e; }
+  if (!webResults?.length) return { summary: null, ai: false, reason: 'no_web_results', model: null };
   const model = ALLOWED_MODELS.includes(opts.model) ? opts.model : DEFAULT_MODEL;
   const lang = LANG_NAME[opts.lang] || 'English';
   const ctx = webResults.slice(0, 10).map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet || ''}\n${r.link}`).join('\n\n');
@@ -393,9 +435,12 @@ app.get('/api/summary', async (req, res) => {
   try {
     const { results } = await runSearch('web', q, { safe, lang });
     const out = await summarizeAI(q, results, { model, aiOn, lang });
-    if (!out) return res.json({ query: q, summary: null, ai: false });
+    // FIX: kalau web kosong / AI off, balas 200 dengan reason jelas —
+    // bukan 500, sehingga UI bisa menampilkan pesan yang informatif.
+    if (!out || !out.summary) return res.json({ query: q, summary: null, ai: false, reason: out?.reason || 'ai_off', webCount: results.length });
     res.json({ query: q, ...out });
   } catch (err) {
+    logErr('/api/summary error:', err);
     res.status(err?.code === 'NO_KEY' ? 501 : 500).json({ error: err?.code === 'NO_KEY' ? 'AI not configured' : 'summary failed', detail: String(err?.message || err) });
   }
 });
