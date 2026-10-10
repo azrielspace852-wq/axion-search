@@ -1,0 +1,149 @@
+name: axion-247
+# ─────────────────────────────────────────────────────────────
+#  AXION Search v4 — 24/7 via GitHub Actions + Cloudflare Tunnel
+#  + VPNX Docker sebagai outbound proxy (anti-block Google/Bing)
+#
+#  Strategi 24/7 (maks 6 jam/job):
+#   1. SELF-CHAIN (utama): menit ke-290 picu job berikutnya (PAT)
+#   2. SAFETY-NET (cadangan): cron setiap 30 menit
+#   3. timeout-minutes: 350 (5j50m) — di bawah 6 jam
+#
+#  ANTI-BLOCK: semua request pencarian keluar lewat HTTP proxy
+#  container VPNX (HTTPS_PROXY=http://localhost:8888), sehingga
+#  Google/Bing melihat IP VPN — bukan IP GitHub Actions.
+# ─────────────────────────────────────────────────────────────
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: 'internal chain marker (jangan diubah)'
+        required: false
+        default: 'false'
+concurrency:
+  group: axion-serve
+  cancel-in-progress: false
+jobs:
+  serve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Safety-net health check (skip jika situs sehat)
+        id: check
+        run: |
+          if [ "${{ github.event.inputs.chain }}" != "true" ]; then
+            if curl -sf --max-time 8 https://axion-search.axn.cc.cd/health >/dev/null 2>&1; then
+              echo "skip=true" >> $GITHUB_OUTPUT
+            else
+              echo "skip=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies (silent)
+        if: steps.check.outputs.skip != 'true'
+        run: npm ci --silent >/dev/null 2>&1 || npm install --silent >/dev/null 2>&1
+
+      - name: Install cloudflared (silent)
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
+          chmod +x /usr/local/bin/cloudflared
+
+      - name: Start VPNX proxy container (anti-block)
+        if: steps.check.outputs.skip != 'true'
+        env:
+          VPN_IMAGE: ${{ secrets.VPNX_IMAGE }}
+          VPN_PROVIDER: ${{ secrets.VPN_PROVIDER }}
+          VPN_TYPE: ${{ secrets.VPN_TYPE }}
+          VPN_USER: ${{ secrets.VPN_USER }}
+          VPN_PASSWORD: ${{ secrets.VPN_PASSWORD }}
+          VPN_COUNTRIES: ${{ secrets.VPN_COUNTRIES }}
+          VPNX_PROXY_USER: ${{ secrets.VPNX_PROXY_USER }}
+          VPNX_PROXY_PASS: ${{ secrets.VPNX_PROXY_PASS }}
+        run: |
+          # Jika credential VPN tidak diset, lewati proxy (tetap jalan tanpa proxy).
+          if [ -z "$VPN_USER" ] && [ -z "$VPN_PASSWORD" ] && [ -z "$VPN_IMAGE" ]; then
+            echo "VPNX credentials not set — running without proxy."
+            exit 0
+          fi
+          docker compose up -d vpnx
+          # Tunggu proxy siap (maks 90 detik)
+          READY=0
+          for i in $(seq 1 30); do
+            if curl -sf --max-time 5 -x http://localhost:8888 https://api.ipify.org >/dev/null 2>&1; then
+              echo "VPNX proxy ready. Exit IP: $(curl -sf --max-time 5 -x http://localhost:8888 https://api.ipify.org)"
+              # Set env untuk step berikutnya (server Node akan memakainya)
+              echo "HTTPS_PROXY=http://localhost:8888" >> $GITHUB_ENV
+              echo "HTTP_PROXY=http://localhost:8888" >> $GITHUB_ENV
+              READY=1
+              break
+            fi
+            sleep 3
+          done
+          if [ "$READY" = "0" ]; then echo "VPNX proxy failed to start — continuing without proxy."; fi
+
+      - name: Tulis secret ke file (silent, tanpa print)
+        if: steps.check.outputs.skip != 'true'
+        env:
+          CERT_PEM: ${{ secrets.CLOUDFLARED_CERT_PEM }}
+          TUNNEL_JSON: ${{ secrets.TUNNEL_CREDENTIALS_JSON }}
+          TUNNEL_UUID: ${{ secrets.TUNNEL_UUID }}
+        run: |
+          mkdir -p ~/.cloudflared
+          printf '%s' "$CERT_PEM" > ~/.cloudflared/cert.pem
+          printf '%s' "$TUNNEL_JSON" > ~/.cloudflared/${TUNNEL_UUID}.json
+          sed "s/__TUNNEL_UUID__/${TUNNEL_UUID}/g" cloudflared/config.yaml.template > ~/.cloudflared/config.yml
+          chmod 600 ~/.cloudflared/*
+
+      - name: Tunggu job lama melepas origin (health-wait, maks 50m)
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          if [ "${{ github.event.inputs.chain }}" = "true" ]; then
+            for i in $(seq 1 200); do
+              if curl -sf --max-time 5 https://axion-search.axn.cc.cd/health >/dev/null 2>&1; then sleep 15; else break; fi
+            done
+          fi
+
+      - name: Jalankan tunnel + server (silent) + self-chain di background
+        if: steps.check.outputs.skip != 'true'
+        env:
+          AI_KEY_1: ${{ secrets.AI_KEY_1 }}
+          AI_KEY_2: ${{ secrets.AI_KEY_2 }}
+          AI_KEY_3: ${{ secrets.AI_KEY_3 }}
+          AI_MODEL_DEFAULT: ${{ secrets.AI_MODEL_DEFAULT }}
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          PORT: 3000
+          SILENT: 1
+          TIMEOUT_MS: 100000
+          # HTTPS_PROXY / HTTP_PROXY otomatis diset step "Start VPNX proxy" lewat $GITHUB_ENV
+        run: |
+          nohup cloudflared tunnel run axion-search >/dev/null 2>&1 &
+          sleep 6
+          nohup node server.js >/dev/null 2>&1 &
+          sleep 4
+          curl -sf --max-time 5 http://localhost:3000/health >/dev/null 2>&1 || exit 1
+          # ── SELF-CHAIN: menit ke-290 picu job berikutnya ──
+          (
+            sleep 17400
+            curl -s -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_PAT}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/${{ github.repository }}/actions/workflows/axion-247.yml/dispatches \
+              -d '{"ref":"${{ github.ref_name }}","inputs":{"chain":"true"}}' \
+              >/dev/null 2>&1
+          ) &
+          sleep 345m

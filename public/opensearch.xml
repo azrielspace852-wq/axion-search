@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
+  <ShortName>AXION Search</ShortName>
+  <Description>Private, fast, AI-powered meta search. No tracking, no ads.</Description>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Image width="16" height="16" type="image/x-icon">data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg></Image>
+  <!-- Hasil pencarian langsung (HTML) — dipakai browser saat user tambah manual -->
+  <Url type="text/html" method="get" template="https://axion-search.axn.cc.cd/search?q={searchTerms}"/>
+  <!-- Shortcut direct: /s/<query> -->
+  <Url type="text/html" method="get" template="https://axion-search.axn.cc.cd/s/{searchTerms}"/>
+  <!-- Public API JSON (untuk layanan AI / SDK) -->
+  <Url type="application/json" method="get" template="https://axion-search.axn.cc.cd/api/v1/search?q={searchTerms}&amp;type=web"/>
+  <Url type="application/json" rel="suggestions" method="get" template="https://axion-search.axn.cc.cd/api/v1/tool/search?q={searchTerms}"/>
+  <moz:SearchForm>https://axion-search.axn.cc.cd/</moz:SearchForm>
+</OpenSearchDescription>

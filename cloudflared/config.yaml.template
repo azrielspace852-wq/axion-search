@@ -1,0 +1,12 @@
+# Cloudflare Tunnel config — template
+# __TUNNEL_UUID__ diganti otomatis oleh GitHub Actions dari secret TUNNEL_UUID.
+# Tunnel name: axion-search
+# Domain publik: axion-search.axn.cc.cd → http://localhost:3000
+
+tunnel: axion-search
+credentials-file: /home/runner/.cloudflared/__TUNNEL_UUID__.json
+
+ingress:
+  - hostname: axion-search.axn.cc.cd
+    service: http://localhost:3000
+  - service: http_status:404
