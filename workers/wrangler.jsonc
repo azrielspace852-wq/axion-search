@@ -14,7 +14,6 @@
     "SITE_DOMAIN": "https://search.xxn.cc.cd",
     "API_DOMAIN": "https://api.search.axn.cc.cd",
     "SAFESEARCH_DEFAULT": "1",
-    "SILENT": "1",
-    "TIMEOUT_MS": "10"
+    "SILENT": "1"
   }
 }
