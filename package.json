@@ -1,0 +1,24 @@
+{
+  "name": "axion-search",
+  "version": "4.1.0",
+  "description": "AXION Search — Cloudflare Pages frontend, Workers API, service bindings, multi-provider meta search and grounded AI summary.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:legacy": "node server.js",
+    "dev:api": "npx wrangler dev --config worker/wrangler.jsonc",
+    "dev:pages": "npx wrangler pages dev ./public --config wrangler.pages.jsonc --service AXION_SEARCH_API=axion-search-api",
+    "deploy:api": "npx wrangler deploy --config worker/wrangler.jsonc",
+    "deploy:pages": "npx wrangler pages deploy ./public --project-name axion-search-site --config wrangler.pages.jsonc",
+    "test": "node --check worker/src/index.js && node --check worker/src/search-engine.js && node --check public/sdk/axion-search-sdk.js && node tests/smoke-tests.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "axios": "^1.7.7",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "cookie-parser": "^1.4.6"
+  }
+}

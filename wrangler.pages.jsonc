@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "axion-search-site",
+  "pages_build_output_dir": "./public",
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "services": [
+    {
+      "binding": "AXION_SEARCH_API",
+      "service": "axion-search-api"
+    }
+  ],
+  "vars": {
+    "SITE_DOMAIN": "https://search.xxn.cc.cd",
+    "API_DOMAIN": "https://api.search.axn.cc.cd"
+  }
+}

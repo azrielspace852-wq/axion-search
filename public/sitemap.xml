@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://search.xxn.cc.cd/</loc><changefreq>weekly</changefreq></url>
+  <url><loc>https://search.xxn.cc.cd/search</loc><changefreq>weekly</changefreq></url>
+  <url><loc>https://search.xxn.cc.cd/settings</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://search.xxn.cc.cd/privacy</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://search.xxn.cc.cd/safesearch</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://search.xxn.cc.cd/docs</loc><changefreq>weekly</changefreq></url>
+  <url><loc>https://search.xxn.cc.cd/changelog</loc><changefreq>weekly</changefreq></url>
+  <url><loc>https://search.xxn.cc.cd/roadmap</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://search.xxn.cc.cd/blueprint</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://search.xxn.cc.cd/bible</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://search.xxn.cc.cd/sdk</loc><changefreq>weekly</changefreq></url>
+</urlset>
