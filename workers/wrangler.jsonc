@@ -2,7 +2,7 @@
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "axion-search-api",
   "main": "src/index.js",
-  "compatibility_date": "2026-10-19",
+  "compatibility_date": "2026-10-18",
   "workers_dev": true,
   "routes": [
     { "pattern": "api.search.axn.cc.cd", "custom_domain": true }
