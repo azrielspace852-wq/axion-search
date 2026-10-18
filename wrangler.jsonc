@@ -3,9 +3,6 @@
   "name": "axion-search-site",
   "pages_build_output_dir": "./public",
   "compatibility_date": "2026-10-19",
-  "limits": {
-    "cpu_ms": 10
-  },
   "services": [
     {
       "binding": "AXION_SEARCH_API",
