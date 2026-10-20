@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SafeSearch — AXION Search</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9889;</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <button class="icon-btn menu-btn" data-menu-toggle aria-label="Open menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <a href="/" class="logo">AXION<span>Search</span></a>
+    <form id="searchForm" class="search-form" autocomplete="off"><input id="query" type="text" name="q" data-i18n-ph="search_ph" placeholder="Search the web…" /><button type="submit" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></form>
+    <div class="top-actions"><select class="lang-select" data-lang-select aria-label="Language"></select><button class="icon-btn" data-theme-toggle aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></div>
+  </header>
+  <main class="container narrow prose">
+    <h1>SafeSearch</h1>
+    <p>SafeSearch filters explicit adult content from search results. It is <strong>enabled by default</strong> and can be toggled in <a href="/settings">Settings</a>.</p>
+    <h2>How it works</h2>
+    <ul>
+      <li>Queries are augmented with negative terms (<code>-porn -xxx -nsfw</code>) sent to the search APIs.</li>
+      <li>Brave Search API is called with <code>safesearch=strict</code> when enabled.</li>
+      <li>Returned results are filtered a second time on the edge against a blocklist of explicit domains and keywords.</li>
+    </ul>
+    <p>No filter is perfect. If you find inappropriate content, please report it via the AXION Hub.</p>
+  </main>
+  <footer class="footer"><div class="foot-links"><a href="/" data-i18n="home">Home</a><a href="/privacy" data-i18n="privacy">Privacy</a><a href="/settings" data-i18n="settings">Settings</a><a href="/docs" data-i18n="docs">Docs</a><a href="/sdk" data-i18n="sdk">SDK</a></div><div>AXION Search v5</div></footer>
+  <script src="/js/i18n.js"></script><script src="/js/db.js"></script><script src="/js/app.js"></script>
+</body>
+</html>

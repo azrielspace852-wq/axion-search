@@ -1,0 +1,14 @@
+{
+  "name": "axion-search-api-worker",
+  "version": "5.0.0",
+  "private": true,
+  "description": "AXION Search backend — Cloudflare Worker (Brave / SerpDive / Tavily + Google AI Studio). No scraping, no Node runtime, no dependencies.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.0"
+  }
+}

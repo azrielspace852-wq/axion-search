@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /search
+Disallow: /api/
+Sitemap: https://search.axn.cc.cd/sitemap.xml

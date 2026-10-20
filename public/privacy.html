@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy Policy — AXION Search</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9889;</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <button class="icon-btn menu-btn" data-menu-toggle aria-label="Open menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <a href="/" class="logo">AXION<span>Search</span></a>
+    <form id="searchForm" class="search-form" autocomplete="off">
+      <input id="query" type="text" name="q" data-i18n-ph="search_ph" placeholder="Search the web…" />
+      <button type="submit" aria-label="Search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </form>
+    <div class="top-actions">
+      <select class="lang-select" data-lang-select aria-label="Language"></select>
+      <button class="icon-btn" data-theme-toggle aria-label="Toggle theme" data-i18n-title="theme">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+  <main class="container narrow prose">
+    <h1>Privacy Policy</h1>
+    <p class="lead">Last updated: October 2026 · AXION Search v5</p>
+
+    <h2>1. Our commitment</h2>
+    <p>AXION Search is a privacy-first meta search engine. We do not build personal profiles, we do not sell data, and we do not serve advertising. Your settings and search history are stored <strong>only on your own device</strong> (in your browser's IndexedDB) and are never transmitted to our servers.</p>
+
+    <h2>2. How search data is processed</h2>
+    <p>When you submit a query, it is sent to our backend (a Cloudflare Worker at <code>api.search.axn.cc.cd</code>), which forwards the query — <strong>without any personally identifying information</strong> — to third-party Search API providers. Results are merged, de-duplicated, cached briefly (up to 5 minutes at the edge, up to 1 hour for AI summaries) to reduce repeated API calls, and returned to you. Queries are not permanently logged or associated with your identity.</p>
+
+    <h2>3. Third-party APIs we use</h2>
+    <p>To deliver results without scraping any website, AXION Search uses the following third-party APIs. Each provider receives only the query text and a generic language/safety preference — no cookies, no user identifiers, no IP address is forwarded by us (their own privacy policies apply to the connection they see from our edge):</p>
+    <ul>
+      <li><strong>Brave Search API</strong> — web, image, video, and news results.</li>
+      <li><strong>SerpDive (Krill mode)</strong> — LLM-optimized web results with raw URLs.</li>
+      <li><strong>Tavily</strong> — LLM-optimized search used for both web listings and AI grounding.</li>
+      <li><strong>iTunes Search API</strong> — audio/music results only.</li>
+      <li><strong>Google AI Studio (Gemini / Gemma models)</strong> — used only when AI summary or AI chat mode is enabled, to produce grounded answers from the retrieved search results. Three API keys are rotated server-side to avoid rate limits; the model (<code>gemma-4-31b-it</code> / <code>gemma-4-26b-a4b-it</code>) is selected automatically by the server.</li>
+    </ul>
+
+    <h2>4. AI features</h2>
+    <p>AI summaries and AI chat are grounded in the search results retrieved for your query. Your conversation history is kept only in your browser's memory for the duration of a chat session and is not stored on our servers. You can disable AI entirely in Settings.</p>
+
+    <h2>5. Cookies &amp; local storage</h2>
+    <p>We use functional cookies only to remember your language, SafeSearch, and theme preferences. All other data (settings, history, cached results) lives in your browser's IndexedDB and can be exported or cleared at any time in Settings.</p>
+
+    <h2>6. Consent</h2>
+    <p>On your first visit you will be asked to accept these Terms and this Privacy Policy. If you decline, access is blocked for that browser session only — you may try again in a new tab or session. Acceptance is remembered on your device.</p>
+
+    <h2>7. Hosting</h2>
+    <p>AXION Search is hosted exclusively on <strong>Cloudflare Pages</strong> (frontend, <code>search.axn.cc.cd</code>) and <strong>Cloudflare Workers</strong> (backend API, <code>api.search.axn.cc.cd</code>), connected via Cloudflare Service Bindings. No other hosting provider, tunnel, or scraping server is involved.</p>
+
+    <h2>8. Contact</h2>
+    <p>Questions about this policy: visit the AXION Hub at <a href="https://axion-hub.axn.cc.cd" target="_blank" rel="noopener">axion-hub.axn.cc.cd</a>.</p>
+  </main>
+  <footer class="footer">
+    <div class="foot-links">
+      <a href="/" data-i18n="home">Home</a>
+      <a href="/settings" data-i18n="settings">Settings</a>
+      <a href="/safesearch" data-i18n="safesearch">SafeSearch</a>
+      <a href="/docs" data-i18n="docs">Docs</a>
+      <a href="/sdk" data-i18n="sdk">SDK</a>
+    </div>
+    <div>AXION Search v5 · Cloudflare Pages + Workers</div>
+  </footer>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/db.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+worker/node_modules/
+
+# Build artifacts
+dist/
+.wrangler/
+worker/.wrangler/
+
+# Local env / secrets (NEVER commit)
+.env
+.env.*
+dev.vars
+worker/dev.vars
+
+# OS / editor
+.DS_Store
+*.log
