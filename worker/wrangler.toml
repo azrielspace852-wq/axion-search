@@ -21,7 +21,7 @@ routes = [
 # KV namespace — Tier 1 edge cache (longer TTL than Cache API)
 # Create with: npx wrangler kv namespace create AXION_KV
 kv_namespaces = [
-  { binding = "AXION_KV", id = "e1cfe313fd794f3e8147f8daa98c3e88" }
+  { binding = "AXION_SEARCH", id = "e1cfe313fd794f3e8147f8daa98c3e88" }
 ]
 
 # Non-secret variables (secrets live in Dashboard, NOT in this file)
